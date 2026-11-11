@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My System Diary</title>
+<style>
+  :root {
+    --blue: #4a7bd4;
+    --blue-light: #eaf1fb;
+    --pastel: #fdf0e9;
+    --pastel2: #f7f3ff;
+    --gray: #9aa0a6;
+    --border: #d7e0ef;
+    --text: #333;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "맑은 고딕", sans-serif;
+    background: linear-gradient(135deg, var(--blue-light), var(--pastel));
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header { text-align: center; padding: 16px; }
+  header h1 { margin: 0 0 12px; color: var(--blue); font-size: 24px; }
+
+  .tabs {
+    display: inline-flex;
+    gap: 6px;
+    background: #fff;
+    padding: 6px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08);
+  }
+  .tabs button {
+    border: none;
+    background: transparent;
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    color: var(--gray);
+  }
+  .tabs button.active { background: var(--blue); color: #fff; }
+  .tabs button#todayBtn {
+    color: var(--blue);
+    background: var(--blue-light);
+    font-weight: bold;
+  }
+
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    max-width: 960px;
+    margin: 16px auto 8px;
+    padding: 0 12px;
+    position: relative;
+  }
+  .nav-bar .arrow {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 38px; height: 38px;
+    font-size: 18px;
+    cursor: pointer;
+    color: var(--blue);
+  }
+  .nav-bar .title {
+    font-size: 18px;
+    font-weight: bold;
+    min-width: 220px;
+    text-align: center;
+  }
+  .day-actions {
+    position: absolute;
+    right: 12px;
+    display: flex;
+    gap: 8px;
+  }
+  .day-actions button {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #fff;
+  }
+  #addBtn { background: var(--blue); }
+  #deleteBtn { background: #e57373; }
+
+  main { max-width: 960px; margin: 0 auto; padding: 12px; }
+  .hidden { display: none !important; }
+
+  table.calendar {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    table-layout: fixed;
+  }
+  table.calendar th {
+    background: var(--blue);
+    color: #fff;
+    padding: 8px 0;
+    font-weight: 500;
+    font-size: 14px;
+  }
+  table.calendar th.sun { background:#6f9be0; }
+  table.calendar td {
+    border: 1px solid var(--border);
+    vertical-align: top;
+    height: 100px;
+    padding: 4px;
+    cursor: pointer;
+    background: #fff;
+  }
+  table.calendar td.other-month { background: #f5f6f8; color: #bbb; }
+  table.calendar td.today { background: var(--pastel2); }
+  .cell-date { font-size: 13px; font-weight: bold; margin-bottom: 2px; }
+  .cell-events { font-size: 12px; }
+
+  .mini-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 1px;
+  }
+  .mini-item span { overflow: hidden; text-overflow: ellipsis; }
+
+  table.weekly td { height: 300px; }
+
+  .done span, .done .todo-text { color: var(--gray); text-decoration: line-through; }
+
+  .daily-list {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    overflow: hidden;
+  }
+  .daily-head, .daily-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .daily-head {
+    background: var(--blue-light);
+    font-weight: bold;
+    color: var(--blue);
+  }
+  .col-done { width: 60px; text-align: center; }
+  .col-text { flex: 1; padding: 0 12px; }
+  .col-del  { width: 60px; text-align: center; }
+  .todo-text { cursor: pointer; }
+  .todo-text:hover { background: #f3f7ff; border-radius: 4px; }
+  .edit-input {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid var(--blue);
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  .empty-msg { padding: 24px; text-align: center; color: var(--gray); }
+
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.35);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal {
+    background: #fff;
+    padding: 24px;
+    border-radius: 12px;
+    width: 320px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.2);
+  }
+  .modal h3 { margin: 0 0 12px; color: var(--blue); }
+  .modal input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  .modal .hint { font-size: 12px; color: var(--gray); margin-top: 8px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>My System Diary</h1>
+    <div class="tabs">
+      <button data-view="month" class="active">월간</button>
+      <button data-view="week">주간</button>
+      <button data-view="day">일간</button>
+      <button id="todayBtn">오늘로 가기</button>
+    </div>
+  </header>
+
+  <div class="nav-bar">
+    <button class="arrow" id="prevBtn">←</button>
+    <div class="title" id="viewTitle"></div>
+    <button class="arrow" id="nextBtn">→</button>
+    <div class="day-actions hidden" id="dayActions">
+      <button id="addBtn">추가</button>
+      <button id="deleteBtn">삭제</button>
+    </div>
+  </div>
+
+  <main>
+    <div id="monthView"></div>
+    <div id="weekView" class="hidden"></div>
+    <div id="dayView" class="hidden"></div>
+  </main>
+
+<script>
+/* ===================== 데이터 영역 ===================== */
+const STORAGE_KEY = "mySystemDiary";
+
+// { "2026-11-10": [ {id, text, done}, ... ], ... }
+let diaryData = loadData();
+
+// 삭제 체크박스 선택 상태 (저장 안 함, 임시)
+let deleteSelection = new Set();
+
+// 현재 화면 상태
+let currentView = "month";     // month | week | day
+let currentDate = new Date();  // 기준 날짜
+
+function makeId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function loadData() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    return migrate(raw);
+  } catch (e) {
+    return {};
+  }
+}
+
+/* 기존 데이터를 표준 구조로 보정 */
+function migrate(data) {
+  let changed = false;
+  Object.keys(data).forEach(key => {
+    const list = data[key];
+    if (!Array.isArray(list)) { data[key] = []; changed = true; return; }
+
+    data[key] = list.map(item => {
+      if (typeof item === "string") {
+        changed = true;
+        return { id: makeId(), text: item, done: false };
+      }
+      if (item && typeof item === "object") {
+        const fixed = { ...item };
+        if (!fixed.id) { fixed.id = makeId(); changed = true; }
+        if (typeof fixed.done !== "boolean") { fixed.done = false; changed = true; }
+        if (typeof fixed.text !== "string") { fixed.text = String(fixed.text ?? ""); changed = true; }
+        return fixed;
+      }
+      changed = true;
+      return { id: makeId(), text: "", done: false };
+    });
+  });
+  if (changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  return data;
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(diaryData));
+}
+
+/* ===================== 날짜 유틸 ===================== */
+function toKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function isSameDate(a, b) {
+  return a.getFullYear() === b.getFullYear()
+      && a.getMonth() === b.getMonth()
+      && a.getDate() === b.getDate();
+}
+
+const WEEK_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
+
+function formatKorean(date) {
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  const w = WEEK_LABELS[date.getDay()];
+  return `${y}년 ${m}월 ${d}일 ${w}요일`;
+}
+
+// 해당 날짜가 속한 주의 일요일 반환
+function getWeekStart(date) {
+  const d = new Date(date);
+  d.setDate(d.getDate() - d.getDay());
+  return d;
+}
+
+// 특정 날짜의 일정 배열 반환 (없으면 빈 배열)
+function getTasks(date) {
+  return diaryData[toKey(date)] || [];
+}
+
+/* ===================== 렌더링 ===================== */
+function render() {
+  // 탭 active 표시 갱신
+  document.querySelectorAll(".tabs button").forEach(btn => {
+    if (!btn.dataset.view) return;
+    btn.classList.toggle("active", btn.dataset.view === currentView);
+  });
+
+  // 일간일 때만 추가/삭제 버튼 노출
+  document.getElementById("dayActions").classList.toggle("hidden", currentView !== "day");
+
+  // 뷰 영역 표시 전환
+  document.getElementById("monthView").classList.toggle("hidden", currentView !== "month");
+  document.getElementById("weekView").classList.toggle("hidden", currentView !== "week");
+  document.getElementById("dayView").classList.toggle("hidden", currentView !== "day");
+
+  if (currentView === "month") renderMonth();
+  else if (currentView === "week") renderWeek();
+  else renderDay();
+}
+
+/* ---------- 월간 ---------- */
+function renderMonth() {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  document.getElementById("viewTitle").textContent = `${year}년 ${month + 1}월`;
+
+  const firstDay = new Date(year, month, 1);
+  const startDate = getWeekStart(firstDay);
+  const today = new Date();
+
+  let html = '<table class="calendar"><thead><tr>';
+  WEEK_LABELS.forEach((w, i) => {
+    html += `<th class="${i === 0 ? "sun" : ""}">${w}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  let cur = new Date(startDate);
+  for (let week = 0; week < 6; week++) {
+    html += "<tr>";
+    for (let i = 0; i < 7; i++) {
+      const inMonth = cur.getMonth() === month;
+      const isToday = isSameDate(cur, today);
+      const tasks = getTasks(cur);
+
+      let cls = "";
+      if (!inMonth) cls += " other-month";
+      if (isToday) cls += " today";
+
+      let items = "";
+      tasks.slice(0, 3).forEach(t => {
+        items += `<div class="mini-item ${t.done ? "done" : ""}">
+          <span>${t.done ? "✓ " : "• "}${escapeHtml(t.text)}</span></div>`;
+      });
+      if (tasks.length > 3) items += `<div class="mini-item">+${tasks.length - 3}개</div>`;
+
+      html += `<td class="${cls.trim()}" data-date="${toKey(cur)}">
+        <div class="cell-date">${cur.getDate()}</div>
+        <div class="cell-events">${items}</div>
+      </td>`;
+
+      cur.setDate(cur.getDate() + 1);
+    }
+    html += "</tr>";
+  }
+  html += "</tbody></table>";
+  document.getElementById("monthView").innerHTML = html;
+
+  // 셀 클릭 → 해당 날짜 일간으로
+  document.querySelectorAll("#monthView td").forEach(td => {
+    td.addEventListener("click", () => goToDay(td.dataset.date));
+  });
+}
+
+/* ---------- 주간 ---------- */
+function renderWeek() {
+  const start = getWeekStart(currentDate);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const today = new Date();
+
+  document.getElementById("viewTitle").textContent =
+    `${start.getMonth() + 1}월 ${start.getDate()}일 ~ ${end.getMonth() + 1}월 ${end.getDate()}일`;
+
+  let html = '<table class="calendar weekly"><thead><tr>';
+  let cur = new Date(start);
+  for (let i = 0; i < 7; i++) {
+    html += `<th class="${i === 0 ? "sun" : ""}">${WEEK_LABELS[i]} ${cur.getDate()}</th>`;
+    cur.setDate(cur.getDate() + 1);
+  }
+  html += '</tr></thead><tbody><tr>';
+
+  cur = new Date(start);
+  for (let i = 0; i < 7; i++) {
+    const isToday = isSameDate(cur, today);
+    const tasks = getTasks(cur);
+
+    let items = "";
+    tasks.forEach(t => {
+      items += `<div class="mini-item ${t.done ? "done" : ""}">
+        <span>${t.done ? "✓ " : "• "}${escapeHtml(t.text)}</span></div>`;
+    });
+
+    html += `<td class="${isToday ? "today" : ""}" data-date="${toKey(cur)}">
+      <div class="cell-events">${items}</div>
+    </td>`;
+    cur.setDate(cur.getDate() + 1);
+  }
+  html += "</tr></tbody></table>";
+  document.getElementById("weekView").innerHTML = html;
+
+  document.querySelectorAll("#weekView td").forEach(td => {
+    td.addEventListener("click", () => goToDay(td.dataset.date));
+  });
+}
+
+/* ---------- 일간 ---------- */
+function renderDay() {
+  document.getElementById("viewTitle").textContent = formatKorean(currentDate);
+  const tasks = getTasks(currentDate);
+
+  let html = `<div class="daily-list">
+    <div class="daily-head">
+      <div class="col-done">완료</div>
+      <div class="col-text">할 일</div>
+      <div class="col-del">삭제</div>
+    </div>`;
+
+  if (tasks.length === 0) {
+    html += `<div class="empty-msg">등록된 일정이 없습니다. '추가' 버튼으로 일정을 만들어보세요!</div>`;
+  } else {
+    tasks.forEach(t => {
+      html += `<div class="daily-row ${t.done ? "done" : ""}" data-id="${t.id}">
+        <div class="col-done">
+          <input type="checkbox" class="chk-done" ${t.done ? "checked" : ""} />
+        </div>
+        <div class="col-text">
+          <span class="todo-text">${escapeHtml(t.text)}</span>
+        </div>
+        <div class="col-del">
+          <input type="checkbox" class="chk-del" ${deleteSelection.has(t.id) ? "checked" : ""} />
+        </div>
+      </div>`;
+    });
+  }
+  html += "</div>";
+  document.getElementById("dayView").innerHTML = html;
+
+  bindDayEvents();
+}
+
+// 특수문자 escape (XSS 방지 + 깨짐 방지)
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+</script>
+
+<script>
+/* ===================== 일간 화면 이벤트 ===================== */
+function bindDayEvents() {
+  // 완료 체크박스 (체크/해제 모두 반영)
+  document.querySelectorAll("#dayView .chk-done").forEach(chk => {
+    chk.addEventListener("change", () => {
+      const id = chk.closest(".daily-row").dataset.id;
+      const tasks = getTasks(currentDate);
+      const task = tasks.find(t => t.id === id);
+      if (task) {
+        task.done = chk.checked;   // 체크하면 true, 해제하면 false
+        saveData();
+        render();                  // 월·주·일 모두 동일하게 반영
+      }
+    });
+  });
+
+  // 삭제용 체크박스 (선택 상태만 기억)
+  document.querySelectorAll("#dayView .chk-del").forEach(chk => {
+    chk.addEventListener("change", () => {
+      const id = chk.closest(".daily-row").dataset.id;
+      if (chk.checked) deleteSelection.add(id);
+      else deleteSelection.delete(id);
+    });
+  });
+
+  // 할 일 글자 클릭 → 인라인 수정
+  document.querySelectorAll("#dayView .todo-text").forEach(span => {
+    span.addEventListener("click", () => {
+      const row = span.closest(".daily-row");
+      const id = row.dataset.id;
+      const tasks = getTasks(currentDate);
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+
+      // input으로 교체
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "edit-input";
+      input.value = task.text;
+      span.replaceWith(input);
+      input.focus();
+      input.select();
+
+      // 저장 처리 (Enter 또는 포커스 아웃)
+      const commit = () => {
+        const newText = input.value.trim();
+        if (newText) task.text = newText;  // 빈 값이면 기존 유지
+        saveData();
+        render();
+      };
+      input.addEventListener("keydown", e => {
+        if (e.key === "Enter") commit();
+        if (e.key === "Escape") render();  // 취소
+      });
+      input.addEventListener("blur", commit);
+    });
+  });
+}
+
+/* ===================== 추가/삭제 버튼 ===================== */
+// 추가 버튼 → 모달 열기
+document.getElementById("addBtn").addEventListener("click", openAddModal);
+
+// 삭제 버튼 → 선택된 항목 삭제
+document.getElementById("deleteBtn").addEventListener("click", () => {
+  if (deleteSelection.size === 0) {
+    alert("삭제할 일정을 체크해주세요.");
+    return;
+  }
+  if (!confirm(`선택한 ${deleteSelection.size}개의 일정을 삭제할까요?`)) return;
+
+  const key = toKey(currentDate);
+  // 선택되지 않은 것만 남긴다 (const 재할당 없이 새 배열 할당)
+  diaryData[key] = getTasks(currentDate).filter(t => !deleteSelection.has(t.id));
+  if (diaryData[key].length === 0) delete diaryData[key];
+
+  deleteSelection.clear();
+  saveData();
+  render();
+});
+
+/* ===================== 모달 ===================== */
+function openAddModal() {
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>일정 추가</h3>
+      <input type="text" id="newTaskInput" placeholder="할 일을 입력하세요" />
+      <div class="hint">${formatKorean(currentDate)}</div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const input = overlay.querySelector("#newTaskInput");
+  input.focus();
+
+  // 저장 처리
+  const commit = () => {
+    const text = input.value.trim();
+    if (text) {
+      const key = toKey(currentDate);
+      if (!diaryData[key]) diaryData[key] = [];
+      diaryData[key].push({ id: makeId(), text, done: false });
+      saveData();
+    }
+    overlay.remove();
+    render();
+  };
+
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") commit();
+    if (e.key === "Escape") overlay.remove();
+  });
+
+  // 배경 클릭 시 닫기 (저장 안 함)
+  overlay.addEventListener("click", e => {
+    if (e.target === overlay) overlay.remove();
+  });
+}
+
+/* ===================== 상단 탭 / 네비게이션 ===================== */
+// 탭 클릭 (월간/주간/일간)
+document.querySelectorAll(".tabs button[data-view]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    currentView = btn.dataset.view;
+    deleteSelection.clear();   // 화면 전환 시 삭제 선택 초기화
+    render();
+  });
+});
+
+// '오늘로 가기' 버튼 → 오늘 날짜 일간 화면으로
+document.getElementById("todayBtn").addEventListener("click", () => {
+  currentDate = new Date();
+  currentView = "day";
+  deleteSelection.clear();
+  render();
+});
+
+// 특정 날짜의 일간으로 이동 (달력 셀 클릭 시 사용)
+function goToDay(dateKey) {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  currentDate = new Date(y, m - 1, d);
+  currentView = "day";
+  deleteSelection.clear();
+  render();
+}
+
+// 이전(←) 버튼
+document.getElementById("prevBtn").addEventListener("click", () => {
+  moveDate(-1);
+});
+
+// 다음(→) 버튼
+document.getElementById("nextBtn").addEventListener("click", () => {
+  moveDate(1);
+});
+
+// 현재 뷰에 따라 이동 단위 결정 (월/주/일)
+function moveDate(dir) {
+  if (currentView === "month") {
+    currentDate.setMonth(currentDate.getMonth() + dir);
+  } else if (currentView === "week") {
+    currentDate.setDate(currentDate.getDate() + dir * 7);
+  } else {
+    currentDate.setDate(currentDate.getDate() + dir);
+  }
+  deleteSelection.clear();
+  render();
+}
+
+/* ===================== 초기 실행 ===================== */
+render();
+</script>
+</body>
+</html>
